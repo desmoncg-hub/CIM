@@ -79,7 +79,8 @@ input[type=range]{flex:1;min-width:160px;height:36px;accent-color:var(--navy)}
 .q .why{font-size:15px;color:var(--mut);margin-top:6px}
 #finish{margin-top:40px;text-align:center;border:2px solid var(--line)}
 #finish.ready{border-color:var(--ok)}
-#code{font:700 38px "Barlow Semi Condensed",sans-serif;letter-spacing:.05em;user-select:all;margin:6px 0}
+#card{max-width:420px;margin:14px auto 0;border:3px solid var(--navy);border-radius:12px;padding:16px;background:light-dark(#eef4fb,#132238)}
+#card .ctitle{font:700 20px "Barlow Semi Condensed",sans-serif;color:var(--ok)}#card .cname{font:700 32px/1.1 "Barlow Semi Condensed",sans-serif;margin:6px 0}#card .cmeta{color:var(--mut)}#card .cstats{display:flex;flex-direction:column;gap:2px;margin-top:6px;font-weight:600}
 .small{font-size:15px;color:var(--mut)}
 @media(max-width:640px){.row{grid-template-columns:56px minmax(0,1fr)}.row select{grid-column:1/-1}.item{grid-template-columns:1fr}.item .opts button{flex:1}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -93,10 +94,10 @@ input[type=range]{flex:1;min-width:160px;height:36px;accent-color:var(--navy)}
   <a href="#s3"><span class="n">3</span>Open vs closed</a>
   <a href="#s4"><span class="n">4</span>Digital vs analog</a>
   <a href="#s5"><span class="n">5</span>Robot cell</a>
-  <a href="#finish"><span class="n">&#10003;</span>Code</a>
+  <a href="#finish"><span class="n">&#10003;</span>Card</a>
 </nav>
 <main>
-<p class="intro">Our robot cell makes aluminum brackets. Work through the five stations to learn how engineers <b>plan</b> the work (process charts), <b>control</b> it (open and closed loop) and <b>sense</b> it (digital and analog signals). Every station checks itself. Finish all five to get the completion code for Canvas. This browser remembers the stations you finish, so you can pick up where you left off.</p>
+<p class="intro">Our robot cell makes aluminum brackets. Work through the five stations to learn how engineers <b>plan</b> the work (process charts), <b>control</b> it (open and closed loop) and <b>sense</b> it (digital and analog signals). Every station checks itself. Finish all five to get your completion card for Canvas. This browser remembers the stations you finish, so you can pick up where you left off.</p>
 
 <section id="s1">
   <h2><span class="n">1</span>Process chart symbols</h2>
@@ -162,16 +163,21 @@ input[type=range]{flex:1;min-width:160px;height:36px;accent-color:var(--navy)}
 </section>
 
 <div class="card" id="finish">
-  <h2 style="justify-content:center">Completion code</h2>
-  <p id="finMsg" style="margin:0 auto">Finish all five stations to unlock your code.</p>
-  <div id="code" hidden></div>
-  <button id="copy" hidden>Copy code</button>
+  <h2 style="justify-content:center">Completion card</h2>
+  <p id="finMsg" style="margin:0 auto">Finish all five stations to unlock your completion card.</p>
+  <div id="nameBox" hidden style="max-width:420px;margin:10px auto 0;text-align:left">
+    <label for="stuName" style="display:block;font-weight:600;margin-bottom:4px">Type your first and last name</label>
+    <input id="stuName" type="text" autocomplete="name" style="width:100%;min-height:44px;font:16px Barlow,sans-serif;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)">
+    <p id="nameMsg" style="color:var(--no);margin:4px 0 0;font-weight:600"></p>
+    <button id="mkCard" class="primary" style="margin-top:8px;width:100%">Show my completion card</button>
+  </div>
+  <div id="card" hidden></div>
+  <p id="shotTip" hidden style="margin:10px auto 0">Take a screenshot of this card and upload it to the <b>Day 2</b> assignment in Canvas. On a Chromebook: <b>Ctrl + Shift + Show windows</b>, then drag around the card.</p>
 </div>
 </main>
 
 <script>
 {
-const CODE = 'SYSTEMS-529'; // teacher: change this each term
 const SYM = {
   operation: {name:'Operation', mean:'Something is changed or made: cut, drilled, assembled, painted.', svg:'<circle class="s" cx="35" cy="28" r="22"/>'},
   transportation: {name:'Transportation', mean:'Something is moved from one place to another.', svg:'<path class="s" d="M6 18h34V6l24 22-24 22V38H6z"/>'},
@@ -185,21 +191,32 @@ const K = Object.keys(SYM);
 const svg = k => `<svg viewBox="0 0 70 56" aria-hidden="true">${SYM[k].svg}</svg>`;
 const $ = id => document.getElementById(id);
 const done = {1:false,2:false,3:false,4:false,5:false};
+let misses = 0;
 const shuffle = a => { const b=[...a]; for (let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];} return b; };
 const symOpts = sel => `<option value="">Choose a symbol...</option>` + K.map(k=>`<option value="${k}"${sel===k?' selected':''}>${SYM[k].name}</option>`).join('');
 function setFb(el, msg, ok){ el.textContent = msg; el.className = 'fb ' + (ok ? 'ok' : 'no'); }
-const SKEY = 'hem-systems-lab-v1';
+const SKEY = 'hem-systems-lab-v2';
+const save = () => { try { localStorage.setItem(SKEY, JSON.stringify({ done, misses })); } catch {} };
+const miss = n => { if (!done[n]) { misses++; save(); } };
 function complete(n, restoring){
-  done[n] = true; if (!restoring) { try { localStorage.setItem(SKEY, JSON.stringify(done)); } catch {} }
+  done[n] = true; if (!restoring) save();
   const fbIds = {1:'symFb',2:'chartFb',3:'ocFb',4:'daFb'};
   if (restoring && fbIds[n]) setFb($(fbIds[n]), 'You finished this station earlier.', true);
   if (restoring && n === 5) $('cellQs').insertAdjacentHTML('afterbegin', '<p class="fb ok" style="margin:0 0 12px">You finished this station earlier.</p>'); document.querySelector(`nav a[href="#s${n}"]`).classList.add('done');
   if (Object.values(done).every(Boolean)) {
-    $('finish').classList.add('ready'); $('finMsg').textContent = 'All five stations complete. Enter this code in Canvas:';
-    $('code').textContent = CODE; $('code').hidden = false; $('copy').hidden = false;
+    $('finish').classList.add('ready'); $('finMsg').textContent = 'All five stations complete. Type your name to make your completion card.';
+    $('nameBox').hidden = false;
   }
 }
-$('copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(CODE); $('copy').textContent = 'Copied'; } catch { $('copy').textContent = 'Select the code and copy it'; } });
+$('mkCard').addEventListener('click', () => {
+  const name = $('stuName').value.trim().replace(/\s+/g, ' ');
+  if (name.split(' ').length < 2) { $('nameMsg').textContent = 'Type your first and last name.'; $('stuName').focus(); return; }
+  $('nameMsg').textContent = ''; const now = new Date();
+  $('card').innerHTML = `<div class="ctitle">Systems Lab: complete</div><div class="cname">${name.replace(/[<>&"]/g, '')}</div>
+    <div class="cmeta">${now.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })} at ${now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</div>
+    <div class="cstats"><span>5 of 5 stations</span><span>${misses} missed ${misses === 1 ? 'check' : 'checks'} along the way</span></div>`;
+  $('card').hidden = false; $('shotTip').hidden = false;
+});
 
 /* 1: learn + check */
 $('learn').innerHTML = K.map(k => `<button class="flip" aria-pressed="false" data-k="${k}">${svg(k)}<span class="nm">Click to reveal</span><span class="hint"></span></button>`).join('');
@@ -211,7 +228,7 @@ $('symCheck').innerHTML = checkOrder.map((k,i) => `<div class="row"><div>${svg(k
 $('symBtn').addEventListener('click', () => {
   let right = 0; checkOrder.forEach((k,i) => { const s = $('sc'+i); const ok = s.value === k; s.classList.toggle('right', ok); s.classList.toggle('wrong', !ok); if (ok) right++; });
   if (right === K.length) { setFb($('symFb'), 'All 7 correct. Station 1 complete.', true); complete(1); }
-  else setFb($('symFb'), `${right} of 7 correct. Fix the red ones. Flip the cards above if you need to study.`, false);
+  else { miss(1); setFb($('symFb'), `${right} of 7 correct. Fix the red ones. Flip the cards above if you need to study.`, false); }
 });
 
 /* 2: process chart */
@@ -233,7 +250,7 @@ $('chartBtn').addEventListener('click', () => {
   let right = 0, firstWrong = null;
   STEPS.forEach(([,k],i) => { const s = $('cs'+i); const ok = s.value === k; s.classList.toggle('right', ok); s.classList.toggle('wrong', !ok); if (ok) right++; else if (firstWrong === null) firstWrong = i; });
   if (right === STEPS.length) { setFb($('chartFb'), 'Your process chart is correct. Station 2 complete.', true); complete(2); }
-  else setFb($('chartFb'), `${right} of ${STEPS.length} correct. Hint for step ${firstWrong+1}: ${chartHints[STEPS[firstWrong][1]]}`, false);
+  else { miss(2); setFb($('chartFb'), `${right} of ${STEPS.length} correct. Hint for step ${firstWrong+1}: ${chartHints[STEPS[firstWrong][1]]}`, false); }
 });
 
 /* 3: open vs closed rig */
@@ -293,7 +310,7 @@ const OC = [
 const ocCheck = sorter('ocSort', OC, 'Open', 'Closed');
 $('ocBtn').addEventListener('click', () => { const r = ocCheck();
   if (r === OC.length) { setFb($('ocFb'), 'All correct. Station 3 complete.', true); complete(3); }
-  else setFb($('ocFb'), `${r} of ${OC.length} correct. Ask: does it measure the result and adjust? If yes, it is closed loop.`, false); });
+  else { miss(3); setFb($('ocFb'), `${r} of ${OC.length} correct. Ask: does it measure the result and adjust? If yes, it is closed loop.`, false); } });
 
 /* 4: signals */
 const N = 240, aHist = Array(N).fill(1.75), dHist = Array(N).fill(0);
@@ -335,7 +352,7 @@ const DA = [
 const daCheck = sorter('daSort', DA, 'Digital', 'Analog');
 $('daBtn').addEventListener('click', () => { const r = daCheck();
   if (r === DA.length) { setFb($('daFb'), 'All correct. Station 4 complete.', true); complete(4); }
-  else setFb($('daFb'), `${r} of ${DA.length} correct. Ask: only two states (digital), or any value in a range (analog)?`, false); });
+  else { miss(4); setFb($('daFb'), `${r} of ${DA.length} correct. Ask: only two states (digital), or any value in a range (analog)?`, false); } });
 
 /* 5: robot cell questions */
 const QS = [
@@ -351,8 +368,8 @@ $('cellQs').innerHTML = QS.map((x,i) => `<div class="q"><p>${i+1}. ${x.q}</p><di
 $('cellQs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const i = +b.dataset.q, x = QS[i];
   if (+b.dataset.j === x.a) { b.classList.add('right'); b.parentElement.querySelectorAll('button').forEach(o => { o.classList.remove('wrong'); o.disabled = o !== b; });
     $('why'+i).textContent = 'Correct. ' + x.why; qDone.add(i); if (qDone.size === QS.length) complete(5); }
-  else { b.classList.add('wrong'); $('why'+i).textContent = 'Not quite. Try another answer.'; } });
-try { const saved = JSON.parse(localStorage.getItem(SKEY) || '{}'); [1,2,3,4,5].forEach(n => { if (saved[n]) complete(n, true); }); } catch {}
+  else { if (!b.classList.contains('wrong')) miss(5); b.classList.add('wrong'); $('why'+i).textContent = 'Not quite. Try another answer.'; } });
+try { const saved = JSON.parse(localStorage.getItem(SKEY) || '{}'); misses = saved.misses || 0; [1,2,3,4,5].forEach(n => { if (saved.done && saved.done[n]) complete(n, true); }); } catch {}
 window.__sys = { done, SYM, STEPS, OC, DA, QS, checkOrder };
 }
 </script>
